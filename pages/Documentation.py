@@ -33,6 +33,8 @@ def run():
         - [Streamlit-OpenAI-Chatbot](https://github.com/AIDevBytes/Streamlit-OpenAI-Chatbot/)
         - [Video - Build Chat PDF app in Python with LangChain, OpenAI, Streamlit](https://www.youtube.com/watch?v=WYzFzZg4YZI)
         - [Build Chat PDF app in Python with LangChain, OpenAI, Streamlit](https://github.com/strongSoda/chat-with-pdf-tutorial)
+        ### Deploy your app with Streamlit:
+        - [Video Deploy your app with Streamlit - min 54:30](https://youtu.be/kbgr4RlE-xs)
         ### Mock Data:
         - [Mock Data](https://github.com/openai/openai-cookbook/tree/main/examples/data)
         ### Debugging:
