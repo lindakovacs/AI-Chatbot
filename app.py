@@ -1,60 +1,152 @@
-import streamlit as st 
-import logging
-import model_handler as model_handler
-import secret
+import streamlit as st
+import os
+from llama_index.core import Document, VectorStoreIndex, ServiceContext
+from llama_index.llms.openai import OpenAI
+from llama_index.core import SimpleDirectoryReader
 
-# import prompt generator module
-import market_sectors.sns as sns
-import market_sectors.story as story
+import logging
 
 # Set up logging
 logging.basicConfig(level = logging.INFO, format = '%(asctime)s - %(levelname)s - %(message)s')
 
-TONE = {
-    'Happy': ['happy','cheerful'],
-    'Horror': ['sad','pessimistic','horror'],
-    'Young': ['teenager','playful','emotional'],
-    'Rebellious': ['emotional','mad']
-}
+os.path.dirname(__file__) # relative directory path
 
-def main():
-    st.title("Zoetis Kids Day!")
-    st.header("Time to meet your AI friend")
-    st.markdown("Let's write a story and some social media postings:")
+st.set_page_config(page_title="AI Chatbot", 
+                   initial_sidebar_state="expanded",
+                   page_icon="🤖"
+                   )
 
-    with st.form('blog_generator'):
-        body = st.text_area("Objective of the story or postings")
-        keyword = st.text_area("What keywords do you have in mind?")
-        tone = st.radio("What's Your Mood Today?", list(TONE.keys()))
-        submitted = st.form_submit_button('Write')
+# Change Theme
+ms = st.session_state
+if "themes" not in ms: 
+  ms.themes = {"current_theme": "light",
+                    "refreshed": True,
+                    
+                    "light": {"theme.base": "dark",
+                              "theme.backgroundColor": "gray",
+                            #   "theme.primaryColor": "#70798c",
+                            #   "theme.secondaryBackgroundColor": "#989898",
+                            #   "theme.textColor": "white",
+                              "button_face": "🌜"},
 
-        if not open_api_key.startswith('sk-'):
-            st.warning('Please enter your OpenAI API key!', icon='⚠')
+                    "dark":  {"theme.base": "light",
+                              "theme.backgroundColor": "white",
+                            #   "theme.primaryColor": "#70798c",
+                            #   "theme.secondaryBackgroundColor": "#e1e5ee",
+                            #   "theme.textColor": "#black",
+                              "button_face": "🌞"},
+                    }
 
-        model_name ="gpt-3.5-turbo-16k"
-        if submitted and body:
-            if body and tone:
-                try:
-                    prompt = story.story_prompt(body,keyword,tone)  # TODO this is the function to add
-                    response = model_handler.openai_api(prompt, model=model_name, temperature=0.7, top_p=1.0, n=1, stream=False)
-                    post = sns.sns_prompt(response,keyword)
-                    response1 = model_handler.openai_api(post, model=model_name, temperature=0.7, top_p=1.0, n=1, stream=False)
+def ChangeTheme():
+  previous_theme = ms.themes["current_theme"]
+  tdict = ms.themes["light"] if ms.themes["current_theme"] == "light" else ms.themes["dark"]
+  for vkey, vval in tdict.items(): 
+    if vkey.startswith("theme"): st._config.set_option(vkey, vval)
 
-                    col1,col2 = st.columns(2)
-                    with col1:
-                        st.subheader("Your Story~")
-                        st.info(response)
-                    with col2:
-                        st.subheader("Your Posting~")
-                        st.info(response1)
-                except Exception as e:
-                    logging.error(f"Error generating prompt or response: {e}")
-                    st.error("Error generating prompt or response. Please try again later.")
-        else:
-            st.error("Start Being Creative!")
-
-if __name__ == "__main__":
-    open_api_key = secret.acn_token
-    main()
+  ms.themes["refreshed"] = False
+  if previous_theme == "dark": ms.themes["current_theme"] = "light"
+  elif previous_theme == "light": ms.themes["current_theme"] = "dark"
 
 
+btn_face = ms.themes["light"]["button_face"] if ms.themes["current_theme"] == "light" else ms.themes["dark"]["button_face"]
+st.button(btn_face, on_click=ChangeTheme)
+
+if ms.themes["refreshed"] == False:
+  ms.themes["refreshed"] = True
+  st.rerun()
+
+# Display logo 
+st.columns(3)[1].image('images/BuyBuddy-logo.png', caption=None,width=250)
+
+# Access the API keys from environment variables
+OPENAI_API_KEY = st.secrets["OPENAI_API_KEY"]
+
+# Display Sidebar for settings and navigation
+# sets up sidebar nav widgets
+with st.sidebar:   
+    st.markdown("# Chat Options")
+    # widget - https://docs.streamlit.io/library/api-reference/widgets/st.selectbox
+
+    # models - https://platform.openai.com/docs/models/gpt-4-and-gpt-4-turbo
+    model = st.selectbox('What model would you like to use?',('gpt-3.5-turbo-16k','gpt-3.5-turbo', 'gpt-4'))
+    
+    # https://docs.streamlit.io/library/api-reference/widgets/st.number_input
+    temperature = st.slider('Temperature', value=0.1, min_value=0.0, max_value=1.0, step=0.1, 
+                            help="The temperature setting to be used when generating output from the model.")
+    
+    max_token_length = st.number_input('Max Token Length', value=200, min_value=200, max_value=1000, step=100, 
+                                    help="Maximum number of tokens to be used when generating output.")
+
+# Define the chatbot function
+def show_chatbot():
+
+    if "messages" not in st.session_state.keys():  # Initialize the chat message history
+        st.session_state.messages = [
+            {
+                "role": "assistant",
+                "content": "Ask me a question about your BestBuy product!",
+            }
+        ]
+
+    @st.cache_resource(show_spinner=False)
+    def load_data():
+       
+        with st.spinner(text="Loading and indexing the docs – hang tight! This should take 1-2 minutes."):
+            reader = SimpleDirectoryReader(input_dir="data", recursive=True)
+            docs = reader.load_data()
+
+            # Service context 
+            service_context = ServiceContext.from_defaults(
+                llm=OpenAI(
+                    model=model, 
+                    temp=temperature, 
+                    max_tokens=max_token_length,
+                    system_prompt="""You are BuyBuddy, an AI-powered Customer Service assistant Chatbot for online customers. 
+                    Your users are asking questions about products sold on BestBuy 
+                    and some documents are provided for you about products sold on bestbuy.com
+                    Your primary function is to extract details from product manuals and to provide accurate product information,
+                    setup instructions, troubleshooting help, and recommend recommend compatible products that meet the customer's requirements.
+                    You will be shown the user's question, and the relevant information from the BestBuy informative materials. 
+                    Answer the user's question using only this information. 
+                    If you don't know the answer, just say you don't know. 
+                    # When assisting a customer, always be efficient, patient, knowledgeable, friendly, and detail-oriented. 
+                    Your traits are: Efficient, Patient, Knowledgeable, Friendly, Detail-Oriented. 
+                    Your communication style should be clear, concise, and focused on providing relevant information promptly.
+                    Remember, your goal is to enhance the customers experience by providing relevant and helpful information promptly. 
+                    Limit yourself to no more than 200 words.
+                    # Use three sentences maximum and be concise in your response.
+                    Answer in the user's question language for eaxple: English, French, Italian, Romanian etc.""",
+                )
+            )
+
+            # Create a VectorStoreIndex from the list of documents
+            index = VectorStoreIndex.from_documents(docs, service_context=service_context)
+            return index
+
+    index = load_data()
+
+    # Create the chat engine
+    if "chat_engine" not in st.session_state.keys(): # Initialize the chat engine
+        st.session_state.chat_engine = index.as_chat_engine(chat_mode="condense_question", verbose=False)
+
+    if prompt := st.chat_input(
+        "Ask your question about Selling on Amazon here..."
+    ):  # Prompt for user input and save to chat history
+        st.session_state.messages.append({"role": "user", "content": prompt})
+
+    for message in st.session_state.messages:  # Display the prior chat messages
+        with st.chat_message(message["role"]):
+            st.write(message["content"])
+
+    # If last message is not from assistant, generate a new response
+    if st.session_state.messages[-1]["role"] != "assistant":
+        with st.chat_message("assistant"):
+            with st.spinner("Thinking..."):
+                response = st.session_state.chat_engine.chat(prompt)
+                st.write(response.response)
+                message = {"role": "assistant", "content": response.response}
+                st.session_state.messages.append(
+                    message
+                )  # Add response to message history
+
+show_chatbot()

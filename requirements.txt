@@ -1,0 +1,8 @@
+openai
+streamlit
+llama-parse
+python-dotenv
+llama-index
+pinecone-client
+sentence-transformers
+nbconvert
