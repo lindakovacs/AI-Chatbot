@@ -74,7 +74,7 @@ with st.sidebar:
     temperature = st.slider('Temperature', value=0.1, min_value=0.0, max_value=1.0, step=0.1, 
                             help="The temperature setting to be used when generating output from the model.")
     
-    max_token_length = st.number_input('Max Token Length', value=200, min_value=200, max_value=1000, step=100, 
+    max_token_length = st.number_input('Max Token Length', value=500, min_value=200, max_value=3000, step=100, 
                                     help="Maximum number of tokens to be used when generating output.")
 
 # Define the chatbot function
@@ -118,6 +118,8 @@ def show_chatbot():
                     When asked about product features, provide detailed yet straightforward descriptions, highlighting key specifications and benefits.
                     When asked about setup instructions, provide step-by-step guidance to ensure the customer can easily follow and complete the setup process.
                     When asked about troubleshooting, offer practical, step-by-step solutions to resolve common issues effectively.
+
+                    When answering questions make sure to don't truncate the answers and continue until the end of the sentence.
 
                     Answer in the user's question language for eaxple: English, French, Italian, Romanian etc.
                     """,
