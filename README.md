@@ -1,5 +1,8 @@
 # AI-Chatbot; Python, Streamlit, OpenAI API
 
+## Documetation and learning resources
+- [Documetation and learning resources](https://github.com/lindakovacs/AI-Chatbot/blob/main/pages/Documentation.py)
+
 ## Chatbot requirements 
 1. Business Usecase: 
  - Customer Service for Online Retailers: Develop a chatbot that can provide information on products that automatically answer customer inquiries about product features.
