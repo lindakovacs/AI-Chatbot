@@ -40,6 +40,7 @@ To interact with the chatbot, you need to have your OpenAI API key. Follow these
 
 ## AI Chatbot Demo
 ![img.png](images/AI-Chatbot.png)
+![img.png](images/box.png)
 
 ## AI Chatbot Dark Theme
 ![img.png](images/dark-theme.png)
