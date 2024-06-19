@@ -1,4 +1,4 @@
-# AI-Chatbot; Python, Streamlit, OpenAI API
+# AI-Chatbot: Python, Streamlit, OpenAI API
 
 ## Documetation and learning resources
 - [Documetation and learning resources](https://github.com/lindakovacs/AI-Chatbot/blob/main/pages/Documentation.py)
